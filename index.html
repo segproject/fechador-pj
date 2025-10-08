@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>📅 Fechador - PJ RP CIX</title>
+    <title>📅 Fechador - PJ RP</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -241,7 +241,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>📅 Fechador - PJ RP CIX</h1>
+        <h1>📅 Fechador - PJ RP</h1>
 
         <div class="form-group">
             <label for="producto">📦 Seleccione el Producto:</label>
@@ -505,11 +505,22 @@
             return `${String(hh).padStart(2, '0')}:${min} ${ampm}`;
         }
 
-        // Función para convertir fecha YYYY-MM-DD a nombre de día
+        // Función para convertir fecha YYYY-MM-DD a nombre de día (local)
         function obtenerNombreDia(fechaISO) {
             const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
             const fecha = new Date(`${fechaISO}T00:00:00-05:00`);
             return diasSemana[fecha.getDay()];
+        }
+
+        // NUEVA FUNCIÓN: obtener nombre del día usando fecha + hora completa (con manejo de zona horaria)
+        function obtenerNombreDiaCompleto(fechaISO, horaStr) {
+            if (!fechaISO || !horaStr) return "día desconocido";
+            const [h, min] = horaStr.split(':').map(Number);
+            const [y, m, d] = fechaISO.split('-').map(Number);
+            // Crear fecha en UTC para evitar desfases
+            const fecha = new Date(Date.UTC(y, m - 1, d, h, min));
+            const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+            return diasSemana[fecha.getUTCDay()];
         }
 
         // Suma días a una fecha en formato YYYY-MM-DD y devuelve YYYY-MM-DD
@@ -701,6 +712,11 @@
             let fechaInicioLinea = null;
             let fechaVencLineaMostrar = "-", horaVencLineaMostrar = "-";
 
+            // Variables para almacenar valores ajustados
+            let vencLineaFinal = null;
+            let fechaVencLineaFinalMostrar = "-";
+            let horaVencLineaFinalMostrar = "-";
+
             if (lF && lH) {
                 fechaInicioLinea = lF;
                 if (shelfLife.linea === "Según empaque") {
@@ -755,9 +771,28 @@
                     const nuevaFechaMostrar = formatearFecha(vencPreparadoOriginal.fecha);
                     const nuevaHoraMostrar = formatearHora(vencPreparadoOriginal.hora);
                     
+                    // Guardar valores ajustados
+                    vencLineaFinal = { 
+                        fecha: vencPreparadoOriginal.fecha, 
+                        hora: vencPreparadoOriginal.hora 
+                    };
+                    fechaVencLineaFinalMostrar = nuevaFechaMostrar;
+                    horaVencLineaFinalMostrar = nuevaHoraMostrar;
+
+                    // Actualizar fila
                     filas[2] = montarFilaSticker("LINEA", formatearFecha(lF), formatearHora(lH), nuevaFechaMostrar, nuevaHoraMostrar);
                     ajustes.push(`LÍNEA ajustado a ${nuevaFechaMostrar} ${nuevaHoraMostrar} (fecha/hora de PREPARADO)`);
+                } else {
+                    // Si no hay ajuste, usar valores originales
+                    vencLineaFinal = vencLineaOriginal;
+                    fechaVencLineaFinalMostrar = fechaVencLineaMostrar;
+                    horaVencLineaFinalMostrar = horaVencLineaMostrar;
                 }
+            } else {
+                // Si no hay ajuste, usar valores originales
+                vencLineaFinal = vencLineaOriginal;
+                fechaVencLineaFinalMostrar = fechaVencLineaMostrar;
+                horaVencLineaFinalMostrar = horaVencLineaMostrar;
             }
 
             // Mostrar sticker
@@ -790,16 +825,16 @@
             }
 
             if (vencPreparadoOriginal) {
-                const dia = obtenerNombreDia(vencPreparadoOriginal.fecha);
+                const dia = obtenerNombreDiaCompleto(vencPreparadoOriginal.fecha, vencPreparadoOriginal.hora);
                 const fecha = formatearFecha(vencPreparadoOriginal.fecha);
                 const hora = formatearHora(vencPreparadoOriginal.hora);
                 preparadoTexto = `${dia} ${fecha} a las ${hora}`;
             }
 
-            if (vencLineaOriginal) {
-                const dia = obtenerNombreDia(vencLineaOriginal.fecha);
-                const fecha = formatearFecha(vencLineaOriginal.fecha);
-                const hora = formatearHora(vencLineaOriginal.hora);
+            if (vencLineaFinal) {
+                const dia = obtenerNombreDiaCompleto(vencLineaFinal.fecha, vencLineaFinal.hora);
+                const fecha = formatearFecha(vencLineaFinal.fecha);
+                const hora = formatearHora(vencLineaFinal.hora);
                 lineaTexto = `${dia} ${fecha} a las ${hora}`;
             }
 
